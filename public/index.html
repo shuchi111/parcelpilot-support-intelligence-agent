@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ParcelPilot · Support Console</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header id="topbar">
+    <div class="brand"><div class="logo">P</div><div><strong>ParcelPilot</strong><span class="sub">Support Intelligence</span></div></div>
+    <nav id="tabs" class="tabs hidden">
+      <button class="tab active" data-view="chat">Chat</button>
+      <button class="tab hidden" data-view="radar" id="radarTab">Ops Radar</button>
+    </nav>
+    <div class="spacer"></div>
+    <div id="llmBadge" class="badge" title="LLM mode">…</div>
+    <div id="identityChip" class="identity-chip hidden"></div>
+    <button id="switchBtn" class="ghost hidden">Switch user</button>
+  </header>
+
+  <!-- ── Login ─────────────────────────────────────────────── -->
+  <main id="loginView" class="login-wrap">
+    <div class="login-card">
+      <h1>Choose a demo identity</h1>
+      <p class="muted">Mock authentication, as the assessment permits. Customers are scoped to their own account at the data layer; staff roles see more.</p>
+      <h2>Customers</h2>
+      <div id="custGrid" class="id-grid"></div>
+      <h2>ParcelPilot staff</h2>
+      <div id="staffGrid" class="id-grid"></div>
+    </div>
+  </main>
+
+  <!-- ── Chat ──────────────────────────────────────────────── -->
+  <section id="chatView" class="chat-layout hidden">
+    <div class="chat-main">
+      <div id="thread" class="thread">
+        <div class="welcome">
+          <div class="welcome-title">How can I help?</div>
+          <div class="muted" id="welcomeSub">Ask about orders, entitlements, cancellations, service credits or SLAs.</div>
+        </div>
+      </div>
+      <div id="suggestRow" class="suggest-row"></div>
+      <div class="composer">
+        <textarea id="composerInput" rows="1" placeholder="Ask anything… (Enter to send, Shift+Enter for a new line)"></textarea>
+        <button id="sendBtn" class="primary" title="Send">➤</button>
+      </div>
+    </div>
+    <aside class="side-panel">
+      <div class="panel-card">
+        <div class="panel-title">Session</div>
+        <div id="sessionInfo" class="session-info"></div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-title">How answers stay trustworthy</div>
+        <ul class="trust-list">
+          <li><b>Tiered sources:</b> your signed agreement overrides general policy.</li>
+          <li><b>Deprecated docs</b> are detected and ignored (v2 policy).</li>
+          <li><b>Historical ticket advice</b> is context only — and gets corrected when wrong.</li>
+          <li><b>Actions never execute</b> without your explicit confirmation.</li>
+          <li><b>Math is deterministic</b> — the model can't invent numbers.</li>
+        </ul>
+      </div>
+    </aside>
+  </section>
+
+  <!-- ── Radar ─────────────────────────────────────────────── -->
+  <section id="radarView" class="radar-wrap hidden">
+    <div class="radar-head">
+      <h2>Ops Radar</h2>
+      <p class="muted">Proactive issue detection across support activity — recurring clusters, SLA risk, anomalies.</p>
+      <button id="radarRefresh" class="ghost">Refresh</button>
+    </div>
+    <div id="radarBody" class="radar-body"><div class="muted">Loading…</div></div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
