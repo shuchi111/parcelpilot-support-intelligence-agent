@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# environment / secrets
+.env
+.env.local
+
+# runtime state (generated knowledge base, mocked actions, audit log)
+data/
+
+# local docs (plan, assignment brief, demo script — not needed in repo)
+doc/
+
+# logs & OS noise
+*.log
+.DS_Store
+Thumbs.db
