@@ -2,7 +2,43 @@
 
 > Companion to the code: agent design, tool design, document/structured-data handling, source reliability & conflict handling, and the trade-offs behind them.
 
-## 1. System shape
+## 1. Data flow
+
+How a question becomes a trusted answer (and how actions stay confirmation-gated):
+
+![ParcelPilot data flow](./architecture-data-flow.png)
+
+<details>
+<summary>Mermaid source (renders on GitHub)</summary>
+
+```mermaid
+flowchart LR
+  U["User login<br/>customer or staff"] --> UI["Chat UI"]
+  UI -->|"SSE stream"| API["Express API<br/>session + /api/chat"]
+  API --> Agent["Agent loop<br/>LLM picks tools"]
+  Agent --> Guard["Access guard<br/>account scope"]
+  Guard --> Tools["Tools"]
+  Tools --> Docs["Doc search<br/>tiered BM25"]
+  Tools --> Data["Orders / accounts / tickets"]
+  Tools --> Calc["Calculator"]
+  Tools --> Prep["prepare_action"]
+  Docs --> Out["Cited answer"]
+  Data --> Out
+  Calc --> Out
+  Prep --> Card["Confirm card in UI"]
+  Card -->|"user clicks Confirm"| Exec["Action executes"]
+  Card -->|"Cancel"| Stop["Nothing runs"]
+  Boot["Boot: PDFs + XLSX"] --> Docs
+  Boot --> Data
+  Radar["Ops Radar detectors"] -->|"staff only"| Board["Radar board"]
+  Board --> UI
+```
+
+</details>
+
+**Read left to right:** identity-scoped chat → API over SSE → agent loop chooses tools → every tool hits the access guard → docs/data/calculator (or a *prepared* action) → cited answer. Confirm is a **user-only** path; the model has no execute tool. Ops Radar is a staff branch computed by code, then handed into the same chat.
+
+## 2. System shape
 
 ```
 Browser SPA ──SSE/REST──► Express server
@@ -21,7 +57,7 @@ Ingestion (boot): original PDFs/XLSX → chunk registry + typed stores + policy 
 
 One process, no external services. Boot ingestion takes <1s (tiny corpus) and re-reads the **original pack files**, which is the strongest possible answer to "load and reason over the supplied data": there is literally no pre-baked knowledge anywhere.
 
-## 2. Agent design
+## 3. Agent design
 
 - **Custom loop instead of a framework.** `agent/loop.js` is a transparent while-loop: send messages+tools → execute tool calls (guarded) → feed results back → repeat (≤8 steps) → final answer with extracted citations. Frameworks (LangChain etc.) would have added abstraction over exactly the parts the assessment grades: tool gating, confirmation, and the event stream.
 - **Two personas, one runtime.** `prompts.js` varies the system prompt by session role: customers get account-scoped framing; staff get cross-account investigation + radar tooling. The *prompts* describe behaviour; the *tools* enforce it (see §4).
@@ -29,7 +65,7 @@ One process, no external services. Boot ingestion takes <1s (tiny corpus) and re
 - **Deterministic math.** Fees/credits/percentages go through the `calculate` tool (recursive-descent parser, no `eval`), so numbers shown to users come from code, not model arithmetic.
 - **Events, not just text.** Every turn streams typed events (`tool_call`, `tool_result`, `delta`, `action_card`, `final`) which the UI renders as a live tool stream — the assessment's "interface should show which tool is being used."
 
-## 3. Tool design (9 tools)
+## 4. Tool design (9 tools)
 
 | Tool | Notes |
 |---|---|
@@ -43,21 +79,21 @@ One process, no external services. Boot ingestion takes <1s (tiny corpus) and re
 
 The two-phase action design is the confirmation requirement made structural: the model literally has no function that executes state changes, and confirmations are user-originated events (card button or a server-verified "yes"). A jailbroken prompt cannot approve its own action.
 
-## 4. Access control — enforced in the data/tool layer
+## 5. Access control — enforced in the data/tool layer
 
 - Every data tool funnels through `tools/guard.js`: a customer's order/ticket/account lookups are filtered to `session.accountId`; **cross-account lookups throw `not_found`** so the system never confirms another account's record even exists.
 - Retrieval scoping: another account's contract chunks can never enter a customer's context (`DocSearch.search` filters by scope).
 - Field-level redaction (`notes`, `assigned_to`) happens in the tool result, not the prompt.
 - Role gates exist twice — prompt *and* executor (`ops_signals`, `/api/radar` 403) — so the model refusing is a courtesy, not the mechanism.
 
-## 5. Document & structured-data handling
+## 6. Document & structured-data handling
 
 - **PDF extraction without dependencies** (`ingest/pdf.js`): FlateDecode streams, ToUnicode CMaps for CID fonts, and a coordinate-aware content interpreter for generators that position every word individually. The pack's PDFs use subset fonts that would come out as gibberish (or shifted columns) with naive extraction — this was built and validated against the actual files.
 - **XLSX without dependencies** (`ingest/xlsx.js`): ZIP central-directory reader (streaming-written ZIPs zero local sizes) + sheet XML parsing that preserves empty cells as `null` — eliminating the silent column-shift bug class.
 - **Chunking by document structure**: numbered sections and `KI-###` entries become chunks, each carrying tier/status/scope/effective-date metadata. The header line ("Status: CURRENT Effective: …") is parsed and cross-checked against the registry at boot so they cannot drift.
 - **Typed store** with IST-aware dates; the README sheet supplies the snapshot clock.
 
-## 6. Source reliability & conflict handling (Problem 2)
+## 7. Source reliability & conflict handling (Problem 2)
 
 | Mechanism | Behaviour |
 |---|---|
@@ -69,11 +105,11 @@ The two-phase action design is the confirmation requirement made structural: the
 | SLA breach candour | breaches are stated plainly with the source of the target, escalation recommended (Policy v3 §4) |
 | Citations | every factual answer cites chunk ids (`[DOC-05#2]`) rendered as chips |
 
-## 7. Ops Radar (Problem 1) — deterministic on purpose
+## 8. Ops Radar (Problem 1) — deterministic on purpose
 
 Signals are computed by code, not vibes: a severity classifier translated from Policy v3 §2 keyword definitions; SLA targets **parsed from the contract/policy text at boot** (with a loud fallback); business-hours/weekend clock (LumenWorks' Sunday tickets correctly show *paused*, not breached); known-issue correlation against `KI-xxx` chunks; recurring-theme clustering; and order anomalies (failed pickups, stale pending cancellations, status-vs-reality conflicts). Every signal card carries evidence, provenance, and a one-click handoff into the agent chat. Determinism makes it explainable, testable (asserted in the structural suite), and cheap — the LLM narrates; it does not detect.
 
-## 8. Major trade-offs
+## 9. Major trade-offs
 
 | Decision | Alternative | Why this way |
 |---|---|---|
@@ -85,7 +121,7 @@ Signals are computed by code, not vibes: a severity classifier translated from P
 | Policy facts parsed from text at boot | Hard-code the SLA table | Satisfies "load and reason over the supplied data"; if a future doc changes numbers, boot re-derives them (parse failure falls back loudly). |
 | `min()` arithmetic in the model *may* skip `calculate` | Force tool for every number | Prompt mandates the tool; observed answers did the math correctly. Acceptable residual risk, noted here for honesty. |
 
-## 9. Known limitations
+## 10. Known limitations
 
 - Sessions and chat history are in-memory (restart = fresh demo state).
 - Business hours are an assumption (stated wherever they change an answer).

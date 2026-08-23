@@ -72,7 +72,7 @@ radar: deterministic detectors (SLA w/ business-hours + contract overrides, know
        clusters, recurring themes, order anomalies) → staff-gated /api/radar + agent tool
 ```
 
-Details: [`ARCHITECTURE.md`](./ARCHITECTURE.md) · product decisions: [`PRODUCT.md`](./PRODUCT.md) · AI usage: [`AI_USAGE.md`](./AI_USAGE.md)
+Details: [`ARCHITECTURE.md`](./ARCHITECTURE.md) (includes the **data-flow diagram**) · product decisions: [`PRODUCT.md`](./PRODUCT.md) · AI usage: [`AI_USAGE.md`](./AI_USAGE.md)
 
 ## Repository layout
 
