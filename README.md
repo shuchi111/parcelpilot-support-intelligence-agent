@@ -1,6 +1,6 @@
 # ParcelPilot Support Intelligence Agent
 
-An AI support system for **ParcelPilot** (B2B logistics platform) built for the CalQuity AI Engineer assessment — a customer-facing support chatbot **and** an internal support/operations agent from one core, plus **Ops Radar**, a proactive issue-detection view.
+An AI support system for **ParcelPilot** (B2B logistics platform) built for the CalQuity  — a customer-facing support chatbot **and** an internal support/operations agent from one core, plus **Ops Radar**, a proactive issue-detection view.
 
 ```
 Customer chatbot  →  answers scoped to the customer's own account, with citations
